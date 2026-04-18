@@ -1,0 +1,92 @@
+OSINT ALAT — OPIS PROGRAMA
+==========================
+
+
+STA PROGRAM RADI
+----------------
+Program prima naziv domena kao ulaz, prikuplja javno dostupne
+informacije o tom domenu kroz 6 modula, i generise HTML izvjestaj
+koji se otvara u web-pregledacu.
+
+Pokretanje:
+    python osint.py
+
+Ulaz:  naziv domena (npr. vijesti.me)
+Izlaz: HTML fajl  (npr. osint_vijesti_me.html)
+
+
+DIJELOVI KODA
+-------------
+
+1. dohvati_ip(domen)
+   Pretvara naziv domena u IP adresu koristecci socket.gethostbyname().
+   Rezultat se koristi u geolokacijskom modulu.
+   Izlaz: string, npr. "185.53.178.10"
+
+
+2. whois_info(domen)
+   Salje WHOIS upit i vraca podatke o registraciji domena.
+   Od svih dostupnih podataka uzima se samo 7 relevantnih polja:
+   naziv domena, registrar, datum registracije, datum isteka,
+   datum izmjene, name serveri i status.
+   Izlaz: rjecnik sa do 7 kljuceva
+
+
+3. dns_info(domen)
+   Salje DNS upite za 7 tipova zapisa: A, AAAA, MX, TXT, NS, CNAME, SOA.
+   Svaki tip se upituje zasebno — ako zapis ne postoji, vraca praznu listu.
+   Izlaz: rjecnik gdje su kljucevi tipovi zapisa, a vrijednosti liste stringova
+
+
+4. ssl_info(domen)
+   Spaja se na port 443 i cita SSL/TLS certifikat.
+   Izvlaci: organizaciju, izdavaca, datume vazenja i broj preostalih
+   dana do isteka (na osnovu cega se certifikat oznacava kao aktivan,
+   uskoro istice ili istekao). Takodjer cita Subject Alt Names —
+   listu svih domena pokrivenih sertifikatom.
+   Izlaz: rjecnik sa podacima sertifikata
+
+
+5. http_headeri(url)
+   Salje HTTP GET zahtjev i analizira povratne headere.
+   Prikuplja: status kod, server, tehnologiju (X-Powered-By),
+   i 7 sigurnosnih headera (HSTS, CSP, X-Frame-Options i dr.).
+   Svaki sigurnosni header se oznacava kao prisutan ili odsutan.
+   Ako postoje kolacici, za svaki se provjerava Secure i HttpOnly zastavica.
+   Izlaz: rjecnik sa osnovnim headerima, sigurnosnim headerima i listom kolacica
+
+
+6. ip_geolokacija(ip)
+   Salje upit prema ip-api.com i vraca informacije o IP adresi.
+   Prikuplja: zemlju, region, grad, ISP, organizaciju, AS broj,
+   vremensku zonu i koordinate.
+   Izlaz: rjecnik sa geolokacijskim podacima
+
+
+7. subdomeni_enum(domen)
+   Pretrazuje crt.sh (Certificate Transparency logovi) trazeci sve
+   SSL certifikate ikad izdane za subdomene datog domena.
+   Duplikati se uklanjaju, a lista se sortira abecedno.
+   Izlaz: rjecnik sa listom poddomena i eventualnom greskom
+
+
+8. Gradnja HTML izvjestaja
+   Funkcije h_red(), h_tabela(), h_status() i h_odjeljak() grade
+   HTML strukturu spajanjem stringova. CSS je smjesten u posebnu
+   varijablu i ugradjen u <style> tag. Funkcija generisi_html()
+   spaja sve sekcije u jedan kompletan HTML dokument.
+   Izlaz: string sa kompletnim HTML dokumentom
+
+
+9. Glavni dio (dno fajla)
+   Poziva sve funkcije redom, ispisuje napredak u terminalu,
+   a na kraju upisuje HTML string u fajl i ispisuje putanju.
+
+
+HTML IZVJESTAJ — IZGLED
+-----------------------
+Izvjestaj ima zaglavlje sa nazivom domena i IP adresom,
+navigacionu traku sa linkovim na svaku sekciju, i 6 sekcija
+u obliku tabela. Sigurnosni headeri i SSL status su oznaceni
+zeleno (uredno) ili crveno (problem). Lista poddomena je
+prikazana u dvije kolone.
